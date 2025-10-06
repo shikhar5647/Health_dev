@@ -238,3 +238,124 @@ def create_top_bottom_comparison(df: pd.DataFrame, metric: str, n: int = 10) -> 
     )
     
     return fig
+
+def create_radar_chart(df: pd.DataFrame, countries: List[str], metrics: List[str]) -> go.Figure:
+    """
+    Create radar chart for country comparison
+    
+    Args:
+        df: DataFrame
+        countries: List of country names
+        metrics: List of metric columns
+        
+    Returns:
+        Plotly figure
+    """
+    fig = go.Figure()
+    
+    # Normalize metrics to 0-100 scale
+    normalized_metrics = {}
+    for metric in metrics:
+        min_val = df[metric].min()
+        max_val = df[metric].max()
+        normalized_metrics[metric] = ((df[metric] - min_val) / (max_val - min_val)) * 100
+    
+    colors = COLOR_SCHEMES['categorical']
+    
+    for idx, country in enumerate(countries):
+        country_data = df[df['Country'] == country]
+        if len(country_data) == 0:
+            continue
+        
+        values = []
+        for metric in metrics:
+            norm_value = normalized_metrics[metric].loc[country_data.index[0]]
+            values.append(norm_value)
+        
+        # Close the radar chart
+        values.append(values[0])
+        
+        fig.add_trace(go.Scatterpolar(
+            r=values,
+            theta=metrics + [metrics[0]],
+            fill='toself',
+            name=country,
+            line_color=colors[idx % len(colors)]
+        ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100]
+            )
+        ),
+        title='Multi-dimensional Country Comparison (Normalized)',
+        template=CHART_CONFIG['template'],
+        height=600
+    )
+    
+    return fig
+
+
+def create_box_plot(df: pd.DataFrame, category_col: str, value_col: str) -> go.Figure:
+    """
+    Create box plot for distribution comparison
+    
+    Args:
+        df: DataFrame
+        category_col: Column for categories
+        value_col: Column with values
+        
+    Returns:
+        Plotly figure
+    """
+    fig = px.box(
+        df,
+        x=category_col,
+        y=value_col,
+        title=f'{value_col.replace("_", " ").title()} Distribution by {category_col.replace("_", " ").title()}',
+        template=CHART_CONFIG['template'],
+        height=CHART_CONFIG['height'],
+        color=category_col
+    )
+    
+    return fig
+
+
+def create_line_chart(df: pd.DataFrame, x_col: str, y_cols: List[str], 
+                     title: str = '') -> go.Figure:
+    """
+    Create line chart for time series or trends
+    
+    Args:
+        df: DataFrame
+        x_col: Column for x-axis
+        y_cols: List of columns for y-axis
+        title: Chart title
+        
+    Returns:
+        Plotly figure
+    """
+    fig = go.Figure()
+    
+    colors = COLOR_SCHEMES['categorical']
+    
+    for idx, col in enumerate(y_cols):
+        fig.add_trace(go.Scatter(
+            x=df[x_col],
+            y=df[col],
+            mode='lines+markers',
+            name=col.replace('_', ' ').title(),
+            line=dict(color=colors[idx % len(colors)])
+        ))
+    
+    fig.update_layout(
+        title=title if title else 'Trend Analysis',
+        xaxis_title=x_col.replace('_', ' ').title(),
+        yaxis_title='Value',
+        template=CHART_CONFIG['template'],
+        height=CHART_CONFIG['height']
+    )
+    
+    return fig
