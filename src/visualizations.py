@@ -113,3 +113,128 @@ def create_scatter_plot(df: pd.DataFrame, x_col: str, y_col: str,
     )
     
     return fig
+
+def create_correlation_heatmap(corr_matrix: pd.DataFrame) -> go.Figure:
+    """
+    Create correlation heatmap
+    
+    Args:
+        corr_matrix: Correlation matrix DataFrame
+        
+    Returns:
+        Plotly figure
+    """
+    fig = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.columns,
+        colorscale='RdBu',
+        zmid=0,
+        text=np.round(corr_matrix.values, 2),
+        texttemplate='%{text}',
+        textfont={"size": 10},
+        colorbar=dict(title="Correlation")
+    ))
+    
+    fig.update_layout(
+        title='Correlation Matrix of Development Indicators',
+        template=CHART_CONFIG['template'],
+        height=600,
+        width=700,
+        xaxis={'side': 'bottom'},
+        yaxis={'side': 'left'}
+    )
+    
+    return fig
+
+
+def create_bar_chart(df: pd.DataFrame, x_col: str, y_col: str, 
+                    orientation: str = 'v', color_col: Optional[str] = None,
+                    title: str = '') -> go.Figure:
+    """
+    Create bar chart
+    
+    Args:
+        df: DataFrame
+        x_col: Column for x-axis (categories)
+        y_col: Column for y-axis (values)
+        orientation: 'v' for vertical, 'h' for horizontal
+        color_col: Column for color coding
+        title: Chart title
+        
+    Returns:
+        Plotly figure
+    """
+    fig = px.bar(
+        df,
+        x=x_col if orientation == 'v' else y_col,
+        y=y_col if orientation == 'v' else x_col,
+        color=color_col,
+        orientation=orientation,
+        title=title,
+        template=CHART_CONFIG['template'],
+        height=CHART_CONFIG['height']
+    )
+    
+    fig.update_layout(
+        xaxis_title=x_col.replace('_', ' ').title(),
+        yaxis_title=y_col.replace('_', ' ').title()
+    )
+    
+    return fig
+
+
+def create_top_bottom_comparison(df: pd.DataFrame, metric: str, n: int = 10) -> go.Figure:
+    """
+    Create comparison chart of top and bottom N countries
+    
+    Args:
+        df: DataFrame
+        metric: Metric column name
+        n: Number of countries to show
+        
+    Returns:
+        Plotly figure
+    """
+    # Get top and bottom countries
+    df_sorted = df.sort_values(metric, ascending=False)
+    top_n = df_sorted.head(n)
+    bottom_n = df_sorted.tail(n)
+    
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=(f'Top {n} Countries', f'Bottom {n} Countries')
+    )
+    
+    # Top countries
+    fig.add_trace(
+        go.Bar(
+            x=top_n[metric],
+            y=top_n['Country'],
+            orientation='h',
+            marker_color='#2ecc71',
+            name='Top'
+        ),
+        row=1, col=1
+    )
+    
+    # Bottom countries
+    fig.add_trace(
+        go.Bar(
+            x=bottom_n[metric],
+            y=bottom_n['Country'],
+            orientation='h',
+            marker_color='#e74c3c',
+            name='Bottom'
+        ),
+        row=1, col=2
+    )
+    
+    fig.update_layout(
+        title=f'Top and Bottom {n} Countries by {metric.replace("_", " ").title()}',
+        template=CHART_CONFIG['template'],
+        height=500,
+        showlegend=False
+    )
+    
+    return fig
