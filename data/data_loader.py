@@ -406,3 +406,181 @@ def merge_temporal_data(dataframes: Dict[str, pd.DataFrame],
         merged_df = merged_df.merge(df, on=on_column, how='outer')
     
     return merged_df
+
+def create_sample_data() -> pd.DataFrame:
+    """
+    Create sample data for testing
+    
+    Returns:
+        Sample DataFrame
+    """
+    np.random.seed(42)
+    
+    countries = [
+        'Norway', 'Switzerland', 'Ireland', 'Germany', 'Iceland',
+        'Sweden', 'Singapore', 'Netherlands', 'Denmark', 'Canada',
+        'United States', 'United Kingdom', 'Japan', 'South Korea', 'France'
+    ]
+    
+    data = {
+        'Country': countries,
+        'hdi_value': np.random.uniform(0.85, 0.98, len(countries)),
+        'life_expectancy': np.random.uniform(78, 85, len(countries)),
+        'expected_schooling': np.random.uniform(15, 20, len(countries)),
+        'mean_schooling': np.random.uniform(11, 14, len(countries)),
+        'gni_per_capita': np.random.uniform(40000, 85000, len(countries))
+    }
+    
+    df = pd.DataFrame(data)
+    df['hdi_rank'] = df['hdi_value'].rank(ascending=False).astype(int)
+    
+    return df
+
+
+@st.cache_data
+def get_regional_aggregates(df: pd.DataFrame, region_col: str = 'Region') -> pd.DataFrame:
+    """
+    Calculate regional aggregates
+    
+    Args:
+        df: DataFrame with regional data
+        region_col: Column name for regions
+        
+    Returns:
+        DataFrame with regional aggregates
+    """
+    if region_col not in df.columns:
+        return pd.DataFrame()
+    
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    
+    regional_agg = df.groupby(region_col)[numeric_cols].agg([
+        'mean', 'median', 'min', 'max', 'std', 'count'
+    ])
+    
+    return regional_agg
+
+
+def calculate_year_over_year_change(df: pd.DataFrame, 
+                                   metric: str, 
+                                   year_cols: List[str]) -> pd.DataFrame:
+    """
+    Calculate year-over-year changes for a metric
+    
+    Args:
+        df: DataFrame
+        metric: Base metric name
+        year_cols: List of year columns
+        
+    Returns:
+        DataFrame with changes
+    """
+    changes = df[['Country']].copy()
+    
+    for i in range(len(year_cols) - 1):
+        current_year = year_cols[i + 1]
+        previous_year = year_cols[i]
+        
+        if current_year in df.columns and previous_year in df.columns:
+            change_col = f'change_{previous_year}_to_{current_year}'
+            changes[change_col] = df[current_year] - df[previous_year]
+            
+            pct_change_col = f'pct_change_{previous_year}_to_{current_year}'
+            changes[pct_change_col] = (
+                (df[current_year] - df[previous_year]) / df[previous_year] * 100
+            )
+    
+    return changes
+
+
+def identify_data_gaps(df: pd.DataFrame, critical_columns: List[str]) -> pd.DataFrame:
+    """
+    Identify countries with missing critical data
+    
+    Args:
+        df: DataFrame
+        critical_columns: List of critical column names
+        
+    Returns:
+        DataFrame with gap analysis
+    """
+    gap_analysis = []
+    
+    for idx, row in df.iterrows():
+        country = row.get('Country', f'Row_{idx}')
+        missing_cols = []
+        
+        for col in critical_columns:
+            if col in df.columns and pd.isna(row[col]):
+                missing_cols.append(col)
+        
+        if missing_cols:
+            gap_analysis.append({
+                'Country': country,
+                'Missing_Columns': ', '.join(missing_cols),
+                'Missing_Count': len(missing_cols),
+                'Completeness_Pct': (
+                    (len(critical_columns) - len(missing_cols)) / len(critical_columns) * 100
+                )
+            })
+    
+    return pd.DataFrame(gap_analysis)
+
+
+def normalize_metrics(df: pd.DataFrame, columns: List[str], 
+                     method: str = 'min-max') -> pd.DataFrame:
+    """
+    Normalize multiple metrics for comparison
+    
+    Args:
+        df: DataFrame
+        columns: List of columns to normalize
+        method: Normalization method
+        
+    Returns:
+        DataFrame with normalized columns
+    """
+    df_normalized = df.copy()
+    
+    for col in columns:
+        if col not in df.columns:
+            continue
+        
+        if method == 'min-max':
+            min_val = df[col].min()
+            max_val = df[col].max()
+            df_normalized[f'{col}_normalized'] = (
+                (df[col] - min_val) / (max_val - min_val)
+            )
+        elif method == 'z-score':
+            mean_val = df[col].mean()
+            std_val = df[col].std()
+            df_normalized[f'{col}_normalized'] = (
+                (df[col] - mean_val) / std_val
+            )
+    
+    return df_normalized
+
+
+# Example usage and testing
+if __name__ == "__main__":
+    # Test the data loader
+    print("Testing DataLoader...")
+    
+    # Create sample data
+    sample_df = create_sample_data()
+    print("\nSample Data:")
+    print(sample_df.head())
+    
+    # Initialize loader with sample data
+    loader = DataLoader()
+    loader.df = sample_df
+    loader.df = loader.add_derived_columns(loader.df)
+    
+    # Get summary
+    summary = loader.get_data_summary()
+    print("\nData Summary:")
+    for key, value in summary.items():
+        print(f"{key}: {value}")
+    
+    print("\nDataLoader test completed successfully!")
