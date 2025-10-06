@@ -359,3 +359,215 @@ def create_line_chart(df: pd.DataFrame, x_col: str, y_cols: List[str],
     )
     
     return fig
+
+def create_sunburst_chart(df: pd.DataFrame, category_col: str, value_col: str) -> go.Figure:
+    """
+    Create sunburst chart for hierarchical data
+    
+    Args:
+        df: DataFrame
+        category_col: Column for categories
+        value_col: Column with values
+        
+    Returns:
+        Plotly figure
+    """
+    fig = px.sunburst(
+        df,
+        path=[category_col, 'Country'],
+        values=value_col,
+        title=f'{value_col.replace("_", " ").title()} by Category',
+        template=CHART_CONFIG['template'],
+        height=600
+    )
+    
+    return fig
+
+
+def create_treemap(df: pd.DataFrame, category_col: str, value_col: str) -> go.Figure:
+    """
+    Create treemap visualization
+    
+    Args:
+        df: DataFrame
+        category_col: Column for grouping
+        value_col: Column with values
+        
+    Returns:
+        Plotly figure
+    """
+    fig = px.treemap(
+        df,
+        path=[category_col, 'Country'],
+        values=value_col,
+        title=f'{value_col.replace("_", " ").title()} Distribution',
+        template=CHART_CONFIG['template'],
+        height=600
+    )
+    
+    return fig
+
+
+def create_parallel_coordinates(df: pd.DataFrame, metrics: List[str], 
+                                color_col: str = 'hdi_value') -> go.Figure:
+    """
+    Create parallel coordinates plot
+    
+    Args:
+        df: DataFrame
+        metrics: List of metric columns
+        color_col: Column for color coding
+        
+    Returns:
+        Plotly figure
+    """
+    fig = px.parallel_coordinates(
+        df,
+        dimensions=metrics,
+        color=color_col,
+        color_continuous_scale=px.colors.diverging.RdYlGn,
+        title='Parallel Coordinates: Multi-dimensional Analysis',
+        template=CHART_CONFIG['template']
+    )
+    
+    fig.update_layout(height=600)
+    
+    return fig
+
+
+def create_bubble_chart(df: pd.DataFrame, x_col: str, y_col: str, 
+                       size_col: str, color_col: Optional[str] = None) -> go.Figure:
+    """
+    Create bubble chart
+    
+    Args:
+        df: DataFrame
+        x_col: Column for x-axis
+        y_col: Column for y-axis
+        size_col: Column for bubble size
+        color_col: Column for color coding
+        
+    Returns:
+        Plotly figure
+    """
+    fig = px.scatter(
+        df,
+        x=x_col,
+        y=y_col,
+        size=size_col,
+        color=color_col,
+        hover_data=['Country'],
+        title=f'Bubble Chart: {y_col} vs {x_col}',
+        template=CHART_CONFIG['template'],
+        height=CHART_CONFIG['height']
+    )
+    
+    fig.update_traces(marker=dict(line=dict(width=1, color='DarkSlateGrey')))
+    
+    return fig
+
+
+def create_violin_plot(df: pd.DataFrame, category_col: str, value_col: str) -> go.Figure:
+    """
+    Create violin plot for distribution visualization
+    
+    Args:
+        df: DataFrame
+        category_col: Column for categories
+        value_col: Column with values
+        
+    Returns:
+        Plotly figure
+    """
+    fig = px.violin(
+        df,
+        x=category_col,
+        y=value_col,
+        box=True,
+        title=f'{value_col.replace("_", " ").title()} Distribution by Category',
+        template=CHART_CONFIG['template'],
+        height=CHART_CONFIG['height']
+    )
+    
+    return fig
+
+
+def create_metric_comparison_bars(comparison_data: Dict, metric_name: str) -> go.Figure:
+    """
+    Create grouped bar chart for country comparison
+    
+    Args:
+        comparison_data: Dictionary with country comparison data
+        metric_name: Name of the metric
+        
+    Returns:
+        Plotly figure
+    """
+    countries = list(comparison_data.keys())
+    values = [comparison_data[country][metric_name]['value'] for country in countries]
+    ranks = [comparison_data[country][metric_name]['rank'] for country in countries]
+    
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=('Values', 'Rankings'),
+        specs=[[{"secondary_y": False}, {"secondary_y": False}]]
+    )
+    
+    # Values
+    fig.add_trace(
+        go.Bar(x=countries, y=values, name='Value', marker_color='#3498db'),
+        row=1, col=1
+    )
+    
+    # Rankings (inverted for better visualization)
+    fig.add_trace(
+        go.Bar(x=countries, y=ranks, name='Rank', marker_color='#e74c3c'),
+        row=1, col=2
+    )
+    
+    fig.update_layout(
+        title=f'{metric_name.replace("_", " ").title()} Comparison',
+        template=CHART_CONFIG['template'],
+        height=400,
+        showlegend=False
+    )
+    
+    return fig
+
+
+def create_gauge_chart(value: float, title: str, max_value: float = 1.0) -> go.Figure:
+    """
+    Create gauge chart for single metric
+    
+    Args:
+        value: Current value
+        title: Chart title
+        max_value: Maximum value for scale
+        
+    Returns:
+        Plotly figure
+    """
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number+delta",
+        value=value,
+        domain={'x': [0, 1], 'y': [0, 1]},
+        title={'text': title},
+        gauge={
+            'axis': {'range': [None, max_value]},
+            'bar': {'color': "#3498db"},
+            'steps': [
+                {'range': [0, max_value * 0.33], 'color': "#e74c3c"},
+                {'range': [max_value * 0.33, max_value * 0.67], 'color': "#f39c12"},
+                {'range': [max_value * 0.67, max_value], 'color': "#2ecc71"}
+            ],
+            'threshold': {
+                'line': {'color': "red", 'width': 4},
+                'thickness': 0.75,
+                'value': max_value * 0.9
+            }
+        }
+    ))
+    
+    fig.update_layout(height=300)
+    
+    return fig
