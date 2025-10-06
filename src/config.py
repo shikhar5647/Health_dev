@@ -51,3 +51,66 @@ SDG_MAPPING = {
     'mean_schooling': {'sdg': 'SDG 4.4', 'goal': 'Quality Education - Skills for Employment'},
     'gni_per_capita': {'sdg': 'SDG 8.5', 'goal': 'Decent Work and Economic Growth'}
 }
+
+# Color Schemes for Visualizations
+COLOR_SCHEMES = {
+    'categorical': ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+                    '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'],
+    'sequential': 'Blues',
+    'diverging': 'RdYlGn',
+    'hdi_gradient': ['#d73027', '#fee08b', '#91cf60', '#1a9850']
+}
+
+# Chart Settings
+CHART_CONFIG = {
+    'height': 500,
+    'template': 'plotly_white',
+    'font_family': 'Arial, sans-serif',
+    'font_size': 12,
+    'title_font_size': 18,
+    'margin': {'l': 50, 'r': 50, 't': 80, 'b': 50}
+}
+
+# Streamlit Page Configuration
+PAGE_CONFIG = {
+    'page_title': 'HDI Wellbeing Analysis Dashboard',
+    'page_icon': '🌍',
+    'layout': 'wide',
+    'initial_sidebar_state': 'expanded'
+}
+
+# Data paths
+DATA_PATHS = {
+    'raw': 'data/raw/',
+    'processed': 'data/processed/',
+    'main_file': 'HDR25_Statistical_Annex_HDI_Table.csv'
+}
+
+# Statistical thresholds
+STATS_CONFIG = {
+    'correlation_threshold': 0.5,
+    'significance_level': 0.05,
+    'outlier_std': 3
+}
+
+# Regional groupings (can be expanded based on your data)
+REGIONS = {
+    'Europe': ['Norway', 'Switzerland', 'Denmark', 'Germany', 'Sweden', 'Netherlands', 
+               'Belgium', 'Ireland', 'Iceland'],
+    'Asia': ['Hong Kong, China (SAR)'],
+    'Oceania': ['Australia'],
+    'North America': [],
+    'Africa': [],
+    'South America': []
+}
+
+# Top N countries to highlight
+TOP_N_COUNTRIES = 15
+BOTTOM_N_COUNTRIES = 15
+
+# Export settings
+EXPORT_CONFIG = {
+    'image_format': 'png',
+    'image_dpi': 300,
+    'csv_encoding': 'utf-8'
+}
