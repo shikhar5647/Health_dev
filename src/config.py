@@ -83,7 +83,7 @@ PAGE_CONFIG = {
 DATA_PATHS = {
     'raw': 'data/raw/',
     'processed': 'data/processed/',
-    'main_file': 'HDR25_Statistical_Annex_HDI_Table.csv'
+    'main_file': 'C:\\Users\\shikh\\OneDrive\\Desktop\\Gen_AI\\Health_dev\\data\\raw\\HDR25_Statistical_Annex_HDI_Table.xlsx - Table 1. HDI.csv'
 }
 
 # Statistical thresholds
