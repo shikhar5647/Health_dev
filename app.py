@@ -803,7 +803,7 @@ def main():
     
     if df is None:
         st.error(f"❌ Error loading data: {error}")
-        st.info("💡 Please ensure your CSV file is placed in: `data/raw/HDR25_Statistical_Annex_HDI_Table.csv`")
+        st.info("💡 Please ensure your CSV file is placed in: `\data\raw\HDI_Data - Sheet1.csv`")
         
         # File uploader as fallback
         st.subheader("Upload Your Data")
