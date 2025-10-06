@@ -66,8 +66,9 @@ def load_data():
     """Load and cache the HDI data"""
     try:
         loader = DataLoader()
-        # Try to load from the specified path
-        df = loader.load_and_prepare('data/raw/HDR25_Statistical_Annex_HDI_Table.csv')
+        # Try to load from the configured main file path
+        from src.config import DATA_PATHS
+        df = loader.load_and_prepare(DATA_PATHS['main_file'])
         return df, None
     except Exception as e:
         return None, str(e)
@@ -457,41 +458,46 @@ def show_correlation_analysis(df):
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
+        coef = correlation_result.get('coefficient')
         st.metric(
             "Correlation",
-            f"{correlation_result['coefficient']:.3f}",
+            f"{coef:.3f}" if coef is not None and not pd.isna(coef) else "N/A",
             help="Pearson correlation coefficient"
         )
     
     with col2:
+        r2 = regression_result.get('r_squared') if regression_result else None
         st.metric(
             "R-squared",
-            f"{regression_result['r_squared']:.3f}",
+            f"{r2:.3f}" if r2 is not None and not pd.isna(r2) else "N/A",
             help="Proportion of variance explained"
         )
     
     with col3:
-        significance = "Yes ✓" if correlation_result['significant'] else "No ✗"
+        significant = correlation_result.get('significant')
+        significance = "Yes ✓" if significant else "No ✗"
         st.metric(
             "Significant?",
-            significance,
+            significance if significant is not None else "N/A",
             help="p < 0.05"
         )
     
     with col4:
+        n_val = correlation_result.get('n')
         st.metric(
             "Sample Size",
-            correlation_result['n'],
+            int(n_val) if isinstance(n_val, (int, float)) and not pd.isna(n_val) else "N/A",
             help="Number of observations"
         )
     
     # Regression equation
-    st.markdown(f"""
-    **Regression Equation:** `{regression_result['equation']}`
-    
-    **Interpretation:** For every 1-unit increase in {METRIC_LABELS.get(x_var, x_var)}, 
-    {METRIC_LABELS.get(y_var, y_var)} changes by approximately {regression_result['slope']:.4f} units.
-    """)
+    if regression_result:
+        st.markdown(f"""
+        **Regression Equation:** `{regression_result['equation']}`
+        
+        **Interpretation:** For every 1-unit increase in {METRIC_LABELS.get(x_var, x_var)}, 
+        {METRIC_LABELS.get(y_var, y_var)} changes by approximately {regression_result['slope']:.4f} units.
+        """)
     
     # Bubble Chart
     if len(numeric_cols) >= 3:

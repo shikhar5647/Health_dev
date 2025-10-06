@@ -14,14 +14,13 @@ HDI_CATEGORIES = {
 # Column mappings for the dataset
 COLUMN_NAMES = {
     'hdi_rank': 'HDI rank',
-    'country': 'Country',
+    'Country': 'Country',
     'hdi_value': 'Human Development Index (HDI)',
     'life_expectancy': 'Life expectancy at birth',
     'expected_schooling': 'Expected years of schooling',
     'mean_schooling': 'Mean years of schooling',
     'gni_per_capita': 'Gross national income (GNI) per capita',
-    'gni_rank_minus_hdi': 'GNI per capita rank minus HDI rank',
-    'hdi_rank_2022': 'HDI rank'
+    'gni_rank_minus_hdi': 'GNI per capita rank minus HDI rank'
 }
 
 # Metric Display Names
@@ -83,7 +82,7 @@ PAGE_CONFIG = {
 DATA_PATHS = {
     'raw': 'data/raw/',
     'processed': 'data/processed/',
-    'main_file': 'C:\\Users\\shikh\\OneDrive\\Desktop\\Gen_AI\\Health_dev\\data\\raw\\HDR25_Statistical_Annex_HDI_Table.xlsx - Table 1. HDI.csv'
+    'main_file': 'data/raw/HDR25_Statistical_Annex_HDI_Table.xlsx - Table 1. HDI.csv'
 }
 
 # Statistical thresholds
