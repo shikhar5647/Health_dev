@@ -406,3 +406,120 @@ def compare_countries_profile(df: pd.DataFrame, countries: List[str], metrics: L
         comparison[country] = profile
     
     return comparison
+
+def calculate_development_gap(df: pd.DataFrame, metric: str, 
+                              country1: str, country2: str) -> Dict:
+    """
+    Calculate development gap between two countries
+    
+    Args:
+        df: DataFrame
+        metric: Metric to compare
+        country1: First country
+        country2: Second country
+        
+    Returns:
+        Dictionary with gap analysis
+    """
+    c1_data = df[df['Country'] == country1][metric]
+    c2_data = df[df['Country'] == country2][metric]
+    
+    if len(c1_data) == 0 or len(c2_data) == 0:
+        return None
+    
+    val1 = c1_data.iloc[0]
+    val2 = c2_data.iloc[0]
+    
+    absolute_gap = val1 - val2
+    relative_gap = (absolute_gap / val2 * 100) if val2 != 0 else np.nan
+    
+    return {
+        f'{country1}_value': val1,
+        f'{country2}_value': val2,
+        'absolute_gap': absolute_gap,
+        'relative_gap_percent': relative_gap,
+        'leader': country1 if val1 > val2 else country2
+    }
+
+
+def convergence_analysis(df: pd.DataFrame, metric: str, 
+                        year_columns: List[str]) -> Dict:
+    """
+    Analyze convergence/divergence in a metric over time
+    
+    Args:
+        df: DataFrame
+        metric: Base metric name
+        year_columns: List of year columns
+        
+    Returns:
+        Dictionary with convergence analysis
+    """
+    results = {
+        'years': [],
+        'standard_deviation': [],
+        'coefficient_variation': [],
+        'gini': []
+    }
+    
+    for col in year_columns:
+        if col in df.columns:
+            data = df[col].dropna()
+            
+            results['years'].append(col)
+            results['standard_deviation'].append(data.std())
+            results['coefficient_variation'].append(data.std() / data.mean() * 100)
+            
+            # Simple Gini calculation
+            sorted_data = data.sort_values()
+            n = len(sorted_data)
+            cumsum = sorted_data.cumsum()
+            gini = (2 * sum((i + 1) * sorted_data.iloc[i] for i in range(n)) - 
+                   (n + 1) * cumsum.iloc[-1]) / (n * cumsum.iloc[-1])
+            results['gini'].append(gini)
+    
+    # Determine trend
+    if len(results['coefficient_variation']) >= 2:
+        trend = 'convergence' if results['coefficient_variation'][-1] < results['coefficient_variation'][0] else 'divergence'
+    else:
+        trend = 'insufficient_data'
+    
+    results['trend'] = trend
+    return results
+
+
+def multidimensional_comparison(df: pd.DataFrame, countries: List[str], 
+                                metrics: List[str]) -> pd.DataFrame:
+    """
+    Create multidimensional comparison with normalized scores
+    
+    Args:
+        df: DataFrame
+        countries: List of countries
+        metrics: List of metrics
+        
+    Returns:
+        DataFrame with normalized comparison
+    """
+    comparison_data = []
+    
+    for country in countries:
+        country_data = df[df['Country'] == country]
+        if len(country_data) == 0:
+            continue
+        
+        row = {'Country': country}
+        
+        for metric in metrics:
+            if metric in df.columns:
+                value = country_data[metric].iloc[0]
+                # Normalize to 0-100 scale
+                min_val = df[metric].min()
+                max_val = df[metric].max()
+                normalized = ((value - min_val) / (max_val - min_val)) * 100 if max_val != min_val else 50
+                row[f'{metric}_normalized'] = normalized
+                row[f'{metric}_actual'] = value
+        
+        comparison_data.append(row)
+    
+    return pd.DataFrame(comparison_data)
