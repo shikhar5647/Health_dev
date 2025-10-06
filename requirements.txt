@@ -1,27 +1,27 @@
 
 # Core Framework
-streamlit==1.31.0
+streamlit
 
 # Data Processing
-pandas==2.1.4
-numpy==1.26.3
+pandas
+numpy
 
 # Visualization
-plotly==5.18.0
-matplotlib==3.8.2
-seaborn==0.13.1
-folium==0.15.1
+plotly
+matplotlib
+seaborn
+folium
 
 
 # Statistical Analysis
-scipy==1.11.4
-statsmodels==0.14.1
-scikit-learn==1.4.0
+scipy
+statsmodels
+scikit-learn
 
 # Data Handling
-openpyxl==3.1.2
-xlrd==2.0.1
+openpyxl
+xlrd
 
 # Utilities
-python-dateutil==2.8.2
-pillow==10.2.0
+python-dateutil
+pillow
