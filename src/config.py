@@ -82,7 +82,7 @@ PAGE_CONFIG = {
 DATA_PATHS = {
     'raw': 'data/raw/',
     'processed': 'data/processed/',
-    'main_file': 'data/raw/HDR25_Statistical_Annex_HDI_Table.xlsx - Table 1. HDI.csv'
+    'main_file': 'data/raw/HDI_Data_Final - Sheet1.csv'
 }
 
 # Statistical thresholds
