@@ -347,3 +347,62 @@ class DataLoader:
         
         return issues
 
+def load_multiple_datasets(file_paths: List[str]) -> Dict[str, pd.DataFrame]:
+    """
+    Load multiple datasets at once
+    
+    Args:
+        file_paths: List of file paths
+        
+    Returns:
+        Dictionary of DataFrames with file names as keys
+    """
+    datasets = {}
+    
+    for path in file_paths:
+        loader = DataLoader(path)
+        try:
+            df = loader.load_and_prepare()
+            file_name = Path(path).stem
+            datasets[file_name] = df
+        except Exception as e:
+            print(f"Error loading {path}: {str(e)}")
+    
+    return datasets
+
+
+def merge_temporal_data(dataframes: Dict[str, pd.DataFrame], 
+                       on_column: str = 'Country') -> pd.DataFrame:
+    """
+    Merge multiple dataframes with temporal data
+    
+    Args:
+        dataframes: Dictionary of DataFrames with year keys
+        on_column: Column to merge on
+        
+    Returns:
+        Merged DataFrame
+    """
+    if not dataframes:
+        return pd.DataFrame()
+    
+    # Start with first dataframe
+    years = sorted(dataframes.keys())
+    merged_df = dataframes[years[0]].copy()
+    
+    # Add suffix to columns
+    cols_to_rename = [col for col in merged_df.columns if col != on_column]
+    merged_df = merged_df.rename(
+        columns={col: f"{col}_{years[0]}" for col in cols_to_rename}
+    )
+    
+    # Merge subsequent dataframes
+    for year in years[1:]:
+        df = dataframes[year].copy()
+        cols_to_rename = [col for col in df.columns if col != on_column]
+        df = df.rename(
+            columns={col: f"{col}_{year}" for col in cols_to_rename}
+        )
+        merged_df = merged_df.merge(df, on=on_column, how='outer')
+    
+    return merged_df
