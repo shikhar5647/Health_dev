@@ -369,3 +369,40 @@ class HDIAnalyzer:
             'max_rank_difference': rank_diff.max(),
             'countries_with_large_diff': data[rank_diff > rank_diff.quantile(0.9)].index.tolist()
         }
+        
+def compare_countries_profile(df: pd.DataFrame, countries: List[str], metrics: List[str]) -> Dict:
+    """
+    Create comprehensive comparison profile for countries
+    
+    Args:
+        df: DataFrame with country data
+        countries: List of country names
+        metrics: List of metrics to compare
+        
+    Returns:
+        Dictionary with comparison data
+    """
+    comparison = {}
+    
+    for country in countries:
+        country_data = df[df['Country'] == country]
+        if len(country_data) == 0:
+            continue
+        
+        profile = {}
+        for metric in metrics:
+            if metric in df.columns:
+                value = country_data[metric].iloc[0]
+                
+                # Calculate percentile rank
+                percentile = (df[metric] < value).sum() / len(df[metric].dropna()) * 100
+                
+                profile[metric] = {
+                    'value': value,
+                    'rank': df[metric].rank(ascending=False).loc[country_data.index[0]],
+                    'percentile': percentile
+                }
+        
+        comparison[country] = profile
+    
+    return comparison
