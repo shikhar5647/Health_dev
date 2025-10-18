@@ -57,6 +57,57 @@ st.markdown("""
         border-left: 4px solid #ffc107;
         margin: 1rem 0;
     }
+    .conclusion-card {
+        background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 6px solid #1f77b4;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s;
+    }
+    .conclusion-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+    .conclusion-title {
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+    .conclusion-highlight {
+        background: linear-gradient(120deg, #e7f3ff 0%, #cfe9ff 100%);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #2196F3;
+        margin: 1rem 0;
+        font-weight: 500;
+    }
+    .key-finding {
+        background-color: #fff9e6;
+        padding: 0.8rem;
+        border-radius: 6px;
+        border-left: 3px solid #ffc107;
+        margin: 0.5rem 0;
+    }
+    .stat-badge {
+        display: inline-block;
+        background-color: #e7f3ff;
+        color: #1f77b4;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-weight: 600;
+        margin: 0.2rem;
+        font-size: 0.9rem;
+    }
+    .recommendation-box {
+        background-color: #f0f9ff;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #2c3e50;
+        margin: 0.8rem 0;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -795,6 +846,630 @@ def show_data_explorer(df):
             st.dataframe(stats_df, use_container_width=True)
 
 
+def show_conclusions(df):
+    """Display conclusions page with comprehensive insights"""
+    
+    st.markdown('<p class="main-header">📋 Key Conclusions & Insights</p>', unsafe_allow_html=True)
+    
+    # Introduction
+    st.markdown("""
+    <div class="info-box">
+    <h3>Comprehensive Analysis Summary</h3>
+    <p>This page synthesizes the key findings from our analysis of global Human Development Index data, 
+    highlighting critical patterns, disparities, and insights across health, education, and economic dimensions.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Calculate key insights
+    analyzer = HDIAnalyzer(df)
+    
+    # Summary Statistics Row
+    st.subheader("📊 Analysis Overview")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            label="Countries Analyzed",
+            value=len(df),
+            delta=None
+        )
+    
+    with col2:
+        if 'hdi_value' in df.columns:
+            hdi_range = df['hdi_value'].max() - df['hdi_value'].min()
+            st.metric(
+                label="HDI Range",
+                value=f"{hdi_range:.3f}",
+                delta=None
+            )
+    
+    with col3:
+        if 'life_expectancy' in df.columns and 'hdi_value' in df.columns:
+            corr_result = analyzer.calculate_correlation_significance('hdi_value', 'life_expectancy')
+            st.metric(
+                label="HDI-Life Exp. Correlation",
+                value=f"{corr_result['coefficient']:.2f}",
+                delta="Significant ✓" if corr_result['significant'] else "Not Sig."
+            )
+    
+    with col4:
+        if 'hdi_category' in df.columns:
+            categories = df['hdi_category'].nunique()
+            st.metric(
+                label="Development Categories",
+                value=categories,
+                delta=None
+            )
+    
+    st.markdown("---")
+    
+    # Card 1: Human Development Index (HDI) Analysis (Full Width)
+    st.markdown("""
+    <div class="conclusion-card" style="border-left-color: #1f77b4;">
+        <div class="conclusion-title">🌍 Human Development Index (HDI) Analysis</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="info-box">
+    <p><strong>Understanding HDI:</strong> The Human Development Index is a composite measure of key dimensions 
+    of human development: a long and healthy life, good education, and a decent standard of living. 
+    Higher values indicate higher human development.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Create tabs for HDI visualizations
+    st.markdown("### 📊 Global HDI Insights & Trends")
+    
+    tab1, tab2, tab3, tab4 = st.tabs(["🗺️ Global Distribution", "📈 Historical Trends", "💰 HDI vs GDP", "👥 HDI vs Fertility"])
+    
+    with tab1:
+        st.markdown("#### Human Development Index Distribution - 2023")
+        
+        # Create world map visualization (choropleth)
+        if 'Country' in df.columns and 'hdi_value' in df.columns:
+            fig_map = px.choropleth(
+                df,
+                locations='Country',
+                locationmode='country names',
+                color='hdi_value',
+                hover_name='Country',
+                hover_data={'hdi_value': ':.3f'},
+                color_continuous_scale=[
+                    [0, '#f0f0c8'],      # Light yellow for low HDI
+                    [0.2, '#b8e0a8'],    # Light green
+                    [0.4, '#80d0d0'],    # Light teal
+                    [0.6, '#5090c0'],    # Medium blue
+                    [0.8, '#3060a0'],    # Dark blue
+                    [1, '#1a3070']       # Very dark blue
+                ],
+                range_color=[0.4, 1.0],
+                title='Global HDI Distribution (2023)',
+                labels={'hdi_value': 'HDI Value'}
+            )
+            fig_map.update_layout(
+                height=500,
+                geo=dict(
+                    showframe=False,
+                    showcoastlines=True,
+                    projection_type='natural earth'
+                )
+            )
+            st.plotly_chart(fig_map, use_container_width=True)
+        
+        st.markdown("""
+        <div class="conclusion-highlight">
+        <strong>Global Leaders & Laggards:</strong>
+        <ul>
+            <li>🏆 <strong>Top Performers:</strong> Switzerland, Norway, and Iceland continue to top the list, 
+            showing outstanding levels of human development with HDI values exceeding 0.95</li>
+            <li>⚠️ <strong>Developmental Challenges:</strong> Countries like Somalia, South Sudan, and the Central 
+            African Republic remain among the lowest, still facing deep developmental struggles with HDI below 0.45</li>
+            <li>💼 <strong>Major Economies:</strong> Big economies such as the USA, UK, Japan, and Russia perform well 
+            overall but still lag behind the very top-ranked nations, showing that economic size doesn't always 
+            translate to highest development outcomes</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with tab2:
+        st.markdown("#### HDI Trajectory: A Permanent Shift?")
+        
+        # Historical HDI trend data
+        years_trend = list(range(1999, 2024))
+        global_hdi_values = [
+            0.638, 0.645, 0.652, 0.659, 0.666, 0.673, 0.680, 0.687, 0.693, 0.699,  # 1999-2008
+            0.704, 0.708, 0.712, 0.716, 0.721, 0.726, 0.732, 0.738, 0.742, 0.747,  # 2009-2018
+            0.737, 0.725, 0.750, 0.755, 0.760  # 2019-2023 (with COVID dip)
+        ]
+        
+        # Pre-2019 trend projection
+        projection_2019_years = [2015, 2019, 2023]
+        projection_2019_values = [0.738, 0.791, 0.805]
+        
+        # Actual post-2019 values
+        actual_post_2019_years = [2019, 2020, 2021, 2022, 2023]
+        actual_post_2019_values = [0.737, 0.725, 0.750, 0.755, 0.760]
+        
+        fig_trajectory = go.Figure()
+        
+        # Main historical line
+        fig_trajectory.add_trace(go.Scatter(
+            x=years_trend,
+            y=global_hdi_values,
+            mode='lines',
+            name='Actual HDI',
+            line=dict(color='#2c3e50', width=3),
+            hovertemplate='Year: %{x}<br>HDI: %{y:.3f}<extra></extra>'
+        ))
+        
+        # Pre-2019 projection (dashed)
+        fig_trajectory.add_trace(go.Scatter(
+            x=projection_2019_years,
+            y=projection_2019_values,
+            mode='lines',
+            name='2019 Trend Projection',
+            line=dict(color='#e74c3c', width=2, dash='dot'),
+            hovertemplate='Year: %{x}<br>Projected HDI: %{y:.3f}<extra></extra>'
+        ))
+        
+        # COVID dip annotation
+        fig_trajectory.add_annotation(
+            x=2020,
+            y=0.725,
+            text="COVID-19<br>Impact",
+            showarrow=True,
+            arrowhead=2,
+            arrowsize=1,
+            arrowwidth=2,
+            arrowcolor="#e74c3c",
+            ax=40,
+            ay=-40,
+            font=dict(size=11, color="#e74c3c")
+        )
+        
+        fig_trajectory.update_layout(
+            title='A Permanent Shift in the Human Development Index Trajectory?',
+            xaxis_title='Year',
+            yaxis_title='Global HDI Value',
+            height=450,
+            template='plotly_white',
+            hovermode='x unified',
+            yaxis=dict(range=[0.60, 0.82])
+        )
+        
+        st.plotly_chart(fig_trajectory, use_container_width=True)
+        
+        st.markdown("""
+        <div class="conclusion-highlight">
+        <strong>Post-Pandemic Recovery Crisis:</strong>
+        <ul>
+            <li>📉 <strong>Widening Inequality:</strong> The gap between rich and poor countries is widening again — 
+            after years of progress, inequality is back on the rise, with poorer nations struggling to recover 
+            from the pandemic</li>
+            <li>💪 <strong>Uneven Recovery:</strong> Wealthier countries have seen strong growth and bounced back 
+            quickly, but many of the world's poorest nations are still below their pre-COVID development levels</li>
+            <li>🔄 <strong>Permanent Shift:</strong> The 2020 disruption appears to have created a lasting trajectory 
+            change, with recovery slower than pre-pandemic projections suggested</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with tab3:
+        st.markdown("#### HDI vs GDP per Capita (2023)")
+        
+        # Sample data for HDI vs GDP visualization (representing key countries)
+        hdi_gdp_data = {
+            'Country': ['Singapore', 'United States', 'Saudi Arabia', 'Brunei', 'Russia', 
+                       'China', 'Chile', 'Iran', 'Indonesia', 'Jordan', 'India', 'Iraq',
+                       'Guatemala', 'Laos', 'Kenya', 'Pakistan', 'Cameroon', 'Uganda',
+                       'Ethiopia', 'Mozambique', 'Mali', 'Niger', 'Burundi'],
+            'HDI': [0.95, 0.93, 0.92, 0.86, 0.83, 0.83, 0.89, 0.80, 0.76, 0.75,
+                   0.70, 0.70, 0.67, 0.62, 0.64, 0.56, 0.59, 0.60, 0.51, 0.52,
+                   0.42, 0.43, 0.44],
+            'GDP_per_capita': [102000, 76000, 70000, 95000, 45000, 28000, 35000, 
+                             15000, 15000, 11000, 9000, 13000, 12000, 8500, 6000,
+                             6000, 4500, 3000, 2800, 1800, 2500, 1400, 900],
+            'Region': ['Asia', 'North America', 'Asia', 'Asia', 'Europe', 'Asia', 'South America',
+                      'Asia', 'Asia', 'Asia', 'Asia', 'Asia', 'North America', 'Asia', 'Africa',
+                      'Asia', 'Africa', 'Africa', 'Africa', 'Africa', 'Africa', 'Africa', 'Africa'],
+            'Population': [6, 335, 36, 0.5, 144, 1412, 20, 89, 277, 11, 1428, 44,
+                          18, 8, 55, 231, 28, 47, 123, 33, 22, 26, 12]
+        }
+        
+        hdi_gdp_df = pd.DataFrame(hdi_gdp_data)
+        
+        fig_hdi_gdp = px.scatter(
+            hdi_gdp_df,
+            x='GDP_per_capita',
+            y='HDI',
+            size='Population',
+            color='Region',
+            hover_name='Country',
+            hover_data={'GDP_per_capita': ':$,.0f', 'HDI': ':.3f', 'Population': ':.1f M'},
+            title='Human Development Index vs. GDP per Capita (2023)',
+            labels={'GDP_per_capita': 'GDP per capita (international-$ in 2021 prices)', 'HDI': 'Human Development Index'},
+            color_discrete_map={
+                'Africa': '#9b59b6',
+                'Asia': '#16a085',
+                'Europe': '#3498db',
+                'North America': '#e67e22',
+                'South America': '#8b4513'
+            },
+            size_max=60,
+            height=500
+        )
+        
+        # Logarithmic x-axis
+        fig_hdi_gdp.update_xaxes(type='log', range=[2.7, 5.2])
+        fig_hdi_gdp.update_layout(template='plotly_white')
+        
+        st.plotly_chart(fig_hdi_gdp, use_container_width=True)
+        
+        st.markdown("""
+        <div class="conclusion-highlight">
+        <strong>HDI Beyond GDP:</strong>
+        <ul>
+            <li>💰 <strong>Economic Concentration:</strong> Economic power is becoming more concentrated, with a 
+            handful of countries and companies dominating global trade and wealth — showing how uneven the 
+            world's growth truly is</li>
+            <li>📊 <strong>Non-Linear Relationship:</strong> While GDP and HDI are correlated, the relationship 
+            is not perfectly linear, especially at higher income levels where additional wealth yields diminishing 
+            returns in human development</li>
+            <li>🌐 <strong>Varied Pathways:</strong> Countries at similar GDP levels can have vastly different HDI 
+            scores, highlighting the importance of how wealth is distributed and invested in health and education</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with tab4:
+        st.markdown("#### Fertility Rate vs. HDI (2023)")
+        
+        # Fertility vs HDI data
+        fertility_hdi_data = {
+            'Country': ['Niger', 'DR Congo', 'Burundi', 'Afghanistan', 'Sudan', 'Ethiopia', 'Nigeria',
+                       'Angola', 'Zambia', 'Congo', 'Kenya', 'Pakistan', 'Djibouti', 'Syria', 
+                       'Cambodia', 'Iraq', 'India', 'Indonesia', 'Egypt', 'Saudi Arabia', 'Brazil',
+                       'China', 'United States', 'Chile', 'South Korea', 'Japan'],
+            'Fertility_Rate': [6.3, 6.0, 5.0, 4.8, 4.4, 4.1, 4.6, 5.1, 4.2, 4.2, 3.3, 3.6, 2.7, 2.8,
+                              2.5, 3.2, 2.1, 2.2, 2.8, 2.3, 1.7, 1.2, 1.6, 1.3, 0.8, 1.3],
+            'HDI': [0.42, 0.52, 0.44, 0.48, 0.53, 0.51, 0.58, 0.60, 0.61, 0.66, 0.63, 0.55, 0.51,
+                   0.58, 0.63, 0.70, 0.70, 0.75, 0.73, 0.92, 0.81, 0.83, 0.93, 0.89, 0.93, 0.92],
+            'Region': ['Africa', 'Africa', 'Africa', 'Asia', 'Africa', 'Africa', 'Africa', 'Africa',
+                      'Africa', 'Africa', 'Africa', 'Asia', 'Africa', 'Asia', 'Asia', 'Asia', 'Asia',
+                      'Asia', 'Africa', 'Asia', 'South America', 'Asia', 'North America', 'South America',
+                      'Asia', 'Asia'],
+            'Population': [26, 99, 12, 40, 47, 123, 218, 35, 20, 6, 55, 231, 1.1, 23, 17, 44,
+                          1428, 277, 109, 36, 215, 1412, 335, 20, 52, 123]
+        }
+        
+        fertility_df = pd.DataFrame(fertility_hdi_data)
+        
+        fig_fertility = px.scatter(
+            fertility_df,
+            x='HDI',
+            y='Fertility_Rate',
+            size='Population',
+            color='Region',
+            hover_name='Country',
+            hover_data={'HDI': ':.3f', 'Fertility_Rate': ':.1f', 'Population': ':.1f M'},
+            title='Fertility Rate vs. Human Development Index (2023)',
+            labels={'HDI': 'Human Development Index', 'Fertility_Rate': 'Fertility rate (live births per woman)'},
+            color_discrete_map={
+                'Africa': '#9b59b6',
+                'Asia': '#16a085',
+                'Europe': '#3498db',
+                'North America': '#e67e22',
+                'South America': '#8b4513'
+            },
+            size_max=60,
+            height=500
+        )
+        
+        fig_fertility.update_layout(template='plotly_white')
+        
+        st.plotly_chart(fig_fertility, use_container_width=True)
+        
+        st.markdown("""
+        <div class="conclusion-highlight">
+        <strong>Development & Demographic Transition:</strong>
+        <ul>
+            <li>👶 <strong>Inverse Relationship:</strong> Clear inverse correlation between HDI and fertility rates — 
+            countries with higher human development tend to have lower birth rates</li>
+            <li>🌍 <strong>African Challenge:</strong> Sub-Saharan African nations show both lower HDI and higher 
+            fertility rates, creating compounding development challenges</li>
+            <li>📉 <strong>Demographic Dividend:</strong> Countries like India are in transition with moderate fertility 
+            (2.1) and rising HDI, potentially benefiting from a demographic dividend if properly managed</li>
+            <li>👥 <strong>Policy Implications:</strong> Investment in women's education and healthcare consistently 
+            correlates with both higher HDI and lower, more sustainable fertility rates</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # India-specific analysis
+    st.markdown("### 🇮🇳 India's Development Journey")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        <div class="key-finding">
+        <strong>📈 India's Progress:</strong>
+        <ul>
+            <li><strong>Current HDI:</strong> India has made solid progress, achieving an HDI of <strong>0.644</strong> 
+            — nearly <strong>50% higher than in 1990</strong></li>
+            <li><strong>Key Improvements:</strong> Significant gains in life expectancy, education access, and 
+            income levels have driven this growth</li>
+            <li><strong>Gender Progress:</strong> Gender inequality in India has also reduced, with the country 
+            performing <strong>better than the global average</strong> on the Gender Inequality Index</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div class="key-finding">
+        <strong>🌏 Regional Comparison:</strong>
+        <ul>
+            <li><strong>Below Regional Leaders:</strong> India still ranks <strong>below Sri Lanka, China, Bhutan, 
+            and Bangladesh</strong> in South Asia</li>
+            <li><strong>Above Neighbors:</strong> However, India remains <strong>ahead of Nepal and Pakistan</strong>, 
+            showing competitive progress in the region</li>
+            <li><strong>Room for Growth:</strong> Despite advancement, India has significant potential to close 
+            the gap with top-performing Asian nations through continued investment in health and education</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Democracy & governance insights
+    st.markdown("""
+    <div class="warning-box">
+    <strong>⚠️ Democracy Paradox:</strong><br>
+    There's a growing "democracy paradox" globally, where people say they support democracy but often back 
+    leaders who undermine it, leading to greater polarization and public frustration. This trend affects 
+    governance quality and can indirectly impact human development outcomes by weakening institutions and 
+    reducing policy effectiveness.
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Card 2: Morbidity & Disease Burden Analysis (Full Width)
+    st.markdown("""
+    <div class="conclusion-card" style="border-left-color: #e74c3c;">
+        <div class="conclusion-title">🏥 Morbidity & Disease Burden Analysis</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="info-box">
+    <p><strong>Understanding Disease Burden:</strong> Disability-Adjusted Life Years (DALYs) combine Years of Life Lost (YLL) 
+    and Years Lived with Disability (YLD) to provide a comprehensive measure of overall disease burden.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Create three columns for morbidity visualizations
+    st.markdown("### 📊 Global Morbidity Trends & Comparisons")
+    
+    tab1, tab2, tab3 = st.tabs(["🇮🇳 India Disease Burden", "🌍 Country Comparison", "📈 Temporal Trends"])
+    
+    with tab1:
+        st.markdown("#### Disease Burden (DALYs) in India - 2021")
+        
+        # India-specific disease data
+        india_diseases = {
+            'Disease': ['Ischemic heart disease', 'Stroke', 'Diabetes mellitus'],
+            'DALYs_millions': [35.0, 22.8, 12.9]
+        }
+        india_df = pd.DataFrame(india_diseases)
+        
+        # Create bar chart for India
+        fig_india = go.Figure(data=[
+            go.Bar(
+                x=india_df['Disease'],
+                y=india_df['DALYs_millions'],
+                marker_color='#5dade2',
+                text=india_df['DALYs_millions'],
+                texttemplate='%{text:.1f}M',
+                textposition='outside'
+            )
+        ])
+        fig_india.update_layout(
+            title='Top 3 Disease Burden Contributors in India (2021)',
+            xaxis_title='Disease Category',
+            yaxis_title='DALYs (Disability-Adjusted Life Years) in Millions',
+            height=400,
+            template='plotly_white'
+        )
+        st.plotly_chart(fig_india, use_container_width=True)
+        
+        st.markdown("""
+        <div class="conclusion-highlight">
+        <strong>Key Findings - India (2021):</strong>
+        <ul>
+            <li>🫀 <strong>Ischemic heart disease</strong> leads with approximately <strong>35 million DALYs</strong>, 
+            representing the highest disease burden</li>
+            <li>🧠 <strong>Stroke</strong> is the second major contributor with nearly <strong>22.8 million DALYs</strong></li>
+            <li>💉 <strong>Diabetes mellitus</strong> contributed around <strong>12.9 million DALYs</strong>, 
+            showing its growing health impact</li>
+            <li>📊 These three diseases together form the major <strong>non-communicable disease (NCD) burden</strong> in India</li>
+            <li>⚠️ Results indicate a clear <strong>epidemiological transition</strong> from infectious to lifestyle-related diseases</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with tab2:
+        st.markdown("#### Country-wise Morbidity Comparison (2021)")
+        
+        # Multi-country morbidity data
+        country_morbidity = {
+            'Country': ['Mexico', 'Egypt', 'Indonesia', 'France', 'United Kingdom'],
+            'DALYs': [38000, 56000, 30500, 48500, 54500],
+            'Incidence': [24500, 57000, 16000, 15000, 47500],
+            'Prevalence': [31500, 16500, 49500, 30000, 50500],
+            'YLD': [25500, 11500, 15500, 18500, 40000],
+            'YLL': [11000, 21000, 36500, 11000, 16500]
+        }
+        morbidity_df = pd.DataFrame(country_morbidity)
+        
+        # Melt the dataframe for grouped bar chart
+        morbidity_melted = morbidity_df.melt(
+            id_vars='Country', 
+            value_vars=['DALYs', 'Incidence', 'Prevalence', 'YLD', 'YLL'],
+            var_name='Morbidity Indicator',
+            value_name='Value'
+        )
+        
+        fig_comparison = px.bar(
+            morbidity_melted,
+            x='Country',
+            y='Value',
+            color='Morbidity Indicator',
+            barmode='group',
+            title='Comprehensive Morbidity Indicators Across Countries (2021)',
+            height=450,
+            color_discrete_map={
+                'DALYs': '#e67e22',
+                'Incidence': '#5dade2',
+                'Prevalence': '#16a085',
+                'YLD': '#f4d03f',
+                'YLL': '#2c3e50'
+            }
+        )
+        fig_comparison.update_layout(template='plotly_white')
+        st.plotly_chart(fig_comparison, use_container_width=True)
+        
+        st.markdown("""
+        <div class="conclusion-highlight">
+        <strong>Key Findings - International Comparison:</strong>
+        <ul>
+            <li>🇪🇬 <strong>Egypt and UK</strong> exhibit higher Incidence and DALYs, reflecting a heavier disease burden in 2021</li>
+            <li>🇲🇽 <strong>Mexico</strong> shows high YLD (Years Lived with Disability), suggesting long-term health conditions 
+            significantly impact morbidity</li>
+            <li>🇫🇷 <strong>France</strong> maintains moderate values, indicating effective healthcare response post-pandemic</li>
+            <li>🇮🇩 <strong>Indonesia</strong> has comparatively lower YLL (Years of Life Lost), which may imply better survival 
+            outcomes or younger population health</li>
+            <li>🌍 Overall patterns highlight diverse morbidity profiles driven by healthcare quality, lifestyle factors, 
+            and socio-economic differences across nations</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with tab3:
+        st.markdown("#### DALYs Temporal Trends (2019-2021)")
+        
+        # Temporal trend data
+        years = [2019.0, 2020.0, 2021.0]
+        temporal_data = {
+            'Mexico': [51000, 45000, 38000],
+            'Egypt': [40500, 49800, 55000],
+            'Indonesia': [37500, 30500, 30500],
+            'France': [40500, 14000, 48500],
+            'United Kingdom': [51000, 33500, 55000]
+        }
+        
+        fig_temporal = go.Figure()
+        colors = {'Mexico': '#e67e22', 'Egypt': '#5dade2', 'Indonesia': '#16a085', 
+                  'France': '#f4d03f', 'United Kingdom': '#2c3e50'}
+        
+        for country, values in temporal_data.items():
+            fig_temporal.add_trace(go.Scatter(
+                x=years,
+                y=values,
+                mode='lines+markers',
+                name=country,
+                line=dict(width=3, color=colors[country]),
+                marker=dict(size=10, color=colors[country])
+            ))
+        
+        fig_temporal.update_layout(
+            title='Country-wise DALYs Trend Analysis (2019-2021)',
+            xaxis_title='Year',
+            yaxis_title='DALYs (Disability-Adjusted Life Years)',
+            height=450,
+            template='plotly_white',
+            hovermode='x unified'
+        )
+        st.plotly_chart(fig_temporal, use_container_width=True)
+        
+        st.markdown("""
+        <div class="conclusion-highlight">
+        <strong>Key Findings - Temporal Trends (2019-2021):</strong>
+        <ul>
+            <li>📈 <strong>Mexico and UK</strong> show relatively high DALYs overall, indicating sustained morbidity burden</li>
+            <li>⚠️ <strong>Egypt</strong> shows a sharp increase in DALYs from 2019 to 2021, suggesting worsening health outcomes</li>
+            <li>📊 <strong>France and Indonesia</strong> have moderate DALYs, but France's DALYs increased significantly in 2021, 
+            possibly due to post-pandemic health impacts</li>
+            <li>🌡️ The 2020 dip in France's data likely reflects COVID-19 pandemic disruptions in data collection 
+            or healthcare access</li>
+            <li>🔍 These trends reflect differences in public health systems, disease management strategies, 
+            and socio-economic factors influencing morbidity levels across nations</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Overall Morbidity Conclusion
+    st.markdown("""
+    <div class="key-finding">
+    <strong>📌 Overall Morbidity Conclusion:</strong><br>
+    The analysis reveals a global shift toward non-communicable diseases (NCDs) as primary health challenges. 
+    Cardiovascular diseases and metabolic disorders (diabetes) dominate the disease burden across both developed 
+    and developing nations. This epidemiological transition necessitates:
+    <ul>
+        <li><strong>Enhanced cardiovascular health programs</strong> focusing on prevention and early intervention</li>
+        <li><strong>Comprehensive diabetes management</strong> strategies including lifestyle modification programs</li>
+        <li><strong>Strengthened public health infrastructure</strong> to handle the dual burden of communicable 
+        and non-communicable diseases</li>
+        <li><strong>International collaboration</strong> for sharing best practices in disease management and prevention</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Download Section
+    st.markdown("---")
+    st.subheader("📥 Download Summary Report")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        # Create summary statistics CSV
+        summary_data = {
+            'Metric': ['Total Countries', 'Average HDI', 'Average Life Expectancy', 'Average GNI per Capita'],
+            'Value': [
+                len(df),
+                df['hdi_value'].mean() if 'hdi_value' in df.columns else 'N/A',
+                df['life_expectancy'].mean() if 'life_expectancy' in df.columns else 'N/A',
+                df['gni_per_capita'].mean() if 'gni_per_capita' in df.columns else 'N/A'
+            ]
+        }
+        summary_df = pd.DataFrame(summary_data)
+        csv_summary = summary_df.to_csv(index=False)
+        
+        st.download_button(
+            label="📊 Download Summary Stats (CSV)",
+            data=csv_summary,
+            file_name="hdi_conclusions_summary.csv",
+            mime="text/csv"
+        )
+    
+    with col2:
+        # Category distribution
+        if 'hdi_category' in df.columns:
+            category_data = df['hdi_category'].value_counts().reset_index()
+            category_data.columns = ['Category', 'Count']
+            csv_categories = category_data.to_csv(index=False)
+            
+            st.download_button(
+                label="📈 Download Category Data (CSV)",
+                data=csv_categories,
+                file_name="hdi_category_distribution.csv",
+                mime="text/csv"
+            )
+    
+    with col3:
+        st.info("💡 Use the Data Explorer page to download complete datasets with custom filters.")
+
+
 def main():
     """Main application function"""
     
@@ -835,7 +1510,8 @@ def main():
             "🔍 Country Comparison",
             "📈 Correlation Analysis",
             "🗺️ Regional Analysis",
-            "📥 Data Explorer"
+            "📥 Data Explorer",
+            "📋 Conclusions"
         ]
     )
     
@@ -892,6 +1568,8 @@ def main():
         show_regional_analysis(df)
     elif page == "📥 Data Explorer":
         show_data_explorer(df)
+    elif page == "📋 Conclusions":
+        show_conclusions(df)
 
 
 if __name__ == "__main__":
