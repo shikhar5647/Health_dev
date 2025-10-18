@@ -1575,6 +1575,183 @@ def show_morbidity_page():
     st.download_button("📥 Download morbidity CSV", morb_df.to_csv(index=False), file_name="morbidity_data.csv")
 
 
+@st.cache_data
+def load_life_expectancy_data():
+    """Fetch life expectancy CSV and metadata from Our World in Data and return a tidy DataFrame.
+
+    Returns: (df, metadata)
+    df columns: ['Country', 'Year', 'LifeExpectancy'] where possible. If the raw CSV uses country columns, we will melt.
+    """
+    import requests
+    le_url = "https://ourworldindata.org/grapher/life-expectancy.csv?v=1&csvType=full&useColumnShortNames=true"
+    meta_url = "https://ourworldindata.org/grapher/life-expectancy.metadata.json?v=1&csvType=full&useColumnShortNames=true"
+
+    # fetch CSV with a custom user-agent
+    try:
+        df_raw = pd.read_csv(le_url, storage_options={'User-Agent': 'Our World In Data data fetch/1.0'})
+    except Exception:
+        # fallback to requests stream
+        r = requests.get(le_url, headers={'User-Agent': 'Our World In Data data fetch/1.0'})
+        r.raise_for_status()
+        from io import StringIO
+        df_raw = pd.read_csv(StringIO(r.text))
+
+    # fetch metadata
+    meta = {}
+    try:
+        meta = requests.get(meta_url, headers={'User-Agent': 'Our World In Data data fetch/1.0'}).json()
+    except Exception:
+        meta = {}
+
+    # Ensure columns: the OWID CSV often has columns: entity, code, year, life_expectancy
+    cols = [c.lower() for c in df_raw.columns]
+    if any(c in cols for c in ['entity', 'year', 'life_expectancy', 'life_expectancy_0']):
+        # normalize column names
+        df = df_raw.rename(columns={
+            k: k.strip() for k in df_raw.columns
+        })
+        # common column names
+        cand_entity = None
+        for cand in ['entity', 'country', 'location']:
+            if cand in (c.lower() for c in df.columns):
+                cand_entity = [col for col in df.columns if col.lower() == cand][0]
+                break
+
+        cand_year = [col for col in df.columns if col.lower() == 'year'][0] if any(col.lower() == 'year' for col in df.columns) else None
+        cand_val = None
+        for possible in df.columns:
+            if possible.lower().startswith('life_expect') or 'life' in possible.lower() and 'expect' in possible.lower():
+                cand_val = possible
+                break
+
+        if cand_entity and cand_year and cand_val:
+            tidy = df[[cand_entity, cand_year, cand_val]].copy()
+            tidy.columns = ['Country', 'Year', 'LifeExpectancy']
+        else:
+            # If data is in wide-format (countries as columns), try to melt
+            # identify numeric year columns
+            year_cols = [c for c in df_raw.columns if str(c).isdigit() or (isinstance(c, str) and c[:4].isdigit())]
+            if year_cols:
+                tidy = df_raw.melt(id_vars=[col for col in df_raw.columns if col not in year_cols], value_vars=year_cols, var_name='Year', value_name='LifeExpectancy')
+                # try to pick the entity column
+                ent_cands = [c for c in tidy.columns if c.lower() in ('entity','country','location')]
+                if ent_cands:
+                    tidy = tidy.rename(columns={ent_cands[0]: 'Country'})
+                else:
+                    # try first non-year id var
+                    nonyear_ids = [col for col in df_raw.columns if col not in year_cols]
+                    if nonyear_ids:
+                        tidy = tidy.rename(columns={nonyear_ids[0]: 'Country'})
+            else:
+                tidy = df_raw.copy()
+
+        # coerce types
+        try:
+            tidy['Year'] = pd.to_numeric(tidy['Year'], errors='coerce').astype('Int64')
+        except Exception:
+            pass
+        try:
+            tidy['LifeExpectancy'] = pd.to_numeric(tidy['LifeExpectancy'], errors='coerce')
+        except Exception:
+            pass
+
+    else:
+        # Unknown format: return raw
+        tidy = df_raw.copy()
+
+    return tidy, meta
+
+
+def show_life_expectancy_page():
+    """Display life expectancy analysis fetched from Our World In Data."""
+    st.title("📉 Life Expectancy — Global Trends & Country Analysis")
+
+    with st.spinner("Fetching life expectancy data..."):
+        try:
+            le_df, le_meta = load_life_expectancy_data()
+        except Exception as e:
+            st.error(f"Failed to fetch life expectancy data: {e}")
+            return
+
+    st.markdown("""
+    Life expectancy is a core summary indicator of population health reflecting the average number of years a newborn is expected to live given prevailing mortality patterns.
+
+    This page fetches data from Our World In Data and provides:
+    - Global trend over time
+    - Latest-year top/bottom country comparisons
+    - Country-specific time series and comparisons
+    - Distribution and download
+    """)
+
+
+    # Basic cleaning
+    if 'Country' not in le_df.columns and any(c.lower() == 'entity' for c in le_df.columns):
+        ent = [c for c in le_df.columns if c.lower() == 'entity'][0]
+        le_df = le_df.rename(columns={ent: 'Country'})
+
+    if 'Year' in le_df.columns:
+        le_df['Year'] = pd.to_numeric(le_df['Year'], errors='coerce')
+    if 'LifeExpectancy' in le_df.columns:
+        le_df['LifeExpectancy'] = pd.to_numeric(le_df['LifeExpectancy'], errors='coerce')
+
+    # Global trend
+    st.subheader("🌐 Global Average Life Expectancy Over Time")
+    if 'Year' in le_df.columns and 'LifeExpectancy' in le_df.columns:
+        global_ts = le_df.groupby('Year', dropna=True)['LifeExpectancy'].mean().reset_index()
+        fig = px.line(global_ts, x='Year', y='LifeExpectancy', title='Global Average Life Expectancy', markers=True)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Year or LifeExpectancy column not found to build global trend")
+
+    # Latest year top/bottom
+    st.subheader("🏆 Top & Bottom Countries (Latest Year)")
+    if 'Year' in le_df.columns and 'LifeExpectancy' in le_df.columns and 'Country' in le_df.columns:
+        latest_year = int(le_df['Year'].dropna().max())
+        latest = le_df[le_df['Year'] == latest_year].dropna(subset=['LifeExpectancy'])
+        if not latest.empty:
+            top = latest.nlargest(15, 'LifeExpectancy')[['Country', 'LifeExpectancy']]
+            bottom = latest.nsmallest(15, 'LifeExpectancy')[['Country', 'LifeExpectancy']]
+            fig_top = px.bar(top.sort_values('LifeExpectancy'), x='LifeExpectancy', y='Country', orientation='h', title=f'Top 15 Countries by Life Expectancy ({latest_year})')
+            fig_bot = px.bar(bottom.sort_values('LifeExpectancy', ascending=False), x='LifeExpectancy', y='Country', orientation='h', title=f'Bottom 15 Countries by Life Expectancy ({latest_year})')
+            st.plotly_chart(fig_top, use_container_width=True)
+            st.plotly_chart(fig_bot, use_container_width=True)
+        else:
+            st.info("No data available for the latest year")
+    else:
+        st.info("Necessary columns (Country/Year/LifeExpectancy) not found for top/bottom analysis")
+
+    # Country selector time series
+    if 'Country' in le_df.columns and 'Year' in le_df.columns and 'LifeExpectancy' in le_df.columns:
+        st.subheader("📈 Country Life Expectancy Time Series")
+        countries = sorted(le_df['Country'].dropna().unique().tolist())
+        sel_country = st.selectbox("Select a country", countries, index=countries.index('United States') if 'United States' in countries else 0)
+        cdf = le_df[le_df['Country'] == sel_country].sort_values('Year')
+        if not cdf.empty:
+            fig = px.line(cdf, x='Year', y='LifeExpectancy', title=f'Life Expectancy — {sel_country}', markers=True)
+            st.plotly_chart(fig, use_container_width=True)
+            # Show components: compare to global average
+            global_avg = le_df.groupby('Year')['LifeExpectancy'].mean().reset_index()
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(x=global_avg['Year'], y=global_avg['LifeExpectancy'], mode='lines', name='Global Avg', line=dict(color='#888')))
+            fig2.add_trace(go.Scatter(x=cdf['Year'], y=cdf['LifeExpectancy'], mode='lines+markers', name=sel_country, line=dict(color='#1f77b4')))
+            fig2.update_layout(title=f'{sel_country} vs Global Average', xaxis_title='Year', yaxis_title='Life Expectancy')
+            st.plotly_chart(fig2, use_container_width=True)
+
+    # Distribution
+    st.subheader("📊 Distribution of Life Expectancy (Latest Year)")
+    if 'Year' in le_df.columns and 'LifeExpectancy' in le_df.columns:
+        latest_year = int(le_df['Year'].dropna().max())
+        latest = le_df[le_df['Year'] == latest_year].dropna(subset=['LifeExpectancy'])
+        if not latest.empty:
+            fig = px.histogram(latest, x='LifeExpectancy', nbins=40, title=f'Life Expectancy Distribution ({latest_year})')
+            st.plotly_chart(fig, use_container_width=True)
+
+    # Download
+    st.subheader("Download Data")
+    csv = le_df.to_csv(index=False)
+    st.download_button("📥 Download life expectancy CSV", csv, file_name="life_expectancy_owid.csv")
+
+
 def main():
     """Main application function"""
     
@@ -1611,6 +1788,7 @@ def main():
         "Go to",
         [
             "🏠 Home",
+            "📉 Life Expectancy",
             "😊 Happiness Index",
             "📊 Global Statistics",
             "🏥 Morbidity",
@@ -1665,6 +1843,8 @@ def main():
     # Route to selected page
     if page == "🏠 Home":
         show_home_page(df)
+    elif page == "📉 Life Expectancy":
+        show_life_expectancy_page()
     elif page == "📊 Global Statistics":
         show_global_statistics(df)
     elif page == "😊 Happiness Index":
