@@ -22,6 +22,8 @@ from src.utils import (
     get_hdi_category, format_number, calculate_summary_stats,
     get_top_bottom_countries, create_comparison_table, get_metric_info
 )
+from src.visualizations import create_line_chart
+from src.utils import load_and_cache_data
 from src.config import PAGE_CONFIG, HDI_CATEGORIES, METRIC_LABELS, SDG_MAPPING, TOP_N_COUNTRIES
 
 # Page configuration
@@ -253,8 +255,8 @@ def show_home_page(df):
         - Morbidity and disease burden matter
         - Environmental sustainability is crucial
         """)
-
-
+        
+        
 def show_global_statistics(df):
     """Display global statistics and distributions"""
     
@@ -616,6 +618,14 @@ def show_regional_analysis(df):
                     <strong>{category}</strong>: {count} countries
                 </div>
                 """, unsafe_allow_html=True)
+            if category in category_counts.index:
+                count = category_counts[category]
+                color = HDI_CATEGORIES[category]['color']
+                st.markdown(f"""
+                <div style='background-color: {color}; padding: 10px; border-radius: 5px; margin: 5px 0; color: white;'>
+                    <strong>{category}</strong>: {count} countries
+                </div>
+                """, unsafe_allow_html=True)
     
     with col2:
         fig = px.bar(
@@ -729,8 +739,6 @@ def show_regional_analysis(df):
                     f"{inequality_results['top_bottom_ratio']:.2f}",
                     help="Ratio of 90th to 10th percentile"
                 )
-
-
 def show_data_explorer(df):
     """Display interactive data explorer"""
     
@@ -1470,6 +1478,177 @@ def show_conclusions(df):
         st.info("💡 Use the Data Explorer page to download complete datasets with custom filters.")
 
 
+def show_happiness_page():
+    """Display a dedicated Happiness Index page using the World Happiness CSV"""
+    st.title("😊 Happiness Index — World Happiness Report")
+
+    # Load happiness data (cached) with encoding fallbacks for Windows/Excel-exported files
+    data_path = Path(__file__).parent / 'data' / 'raw' / 'Happiness_data.csv'
+    try:
+        happ_df = load_and_cache_data(str(data_path))
+    except Exception as e:
+        # Try common fallback encodings when utf-8 fails (Excel/Windows sometimes use cp1252/latin-1)
+        last_exc = e
+        fallback_encodings = ['utf-8-sig', 'latin-1', 'cp1252']
+        happ_df = None
+        for enc in fallback_encodings:
+            try:
+                happ_df = pd.read_csv(data_path, encoding=enc)
+                #st.warning(f"Loaded happiness data using fallback encoding: {enc}")
+                break
+            except Exception as e2:
+                last_exc = e2
+
+        if happ_df is None:
+            st.error(f"Could not load happiness data: {last_exc}")
+            return
+
+    # Basic cleaning / rename for convenience
+    # Standardize column names
+    happ_df.columns = [c.strip() for c in happ_df.columns]
+    # Keep core columns
+    expected_cols = ['Year', 'Rank', 'Country name', 'Life evaluation (3-year average)',
+                     'Explained by: Log GDP per capita', 'Explained by: Social support',
+                     'Explained by: Healthy life expectancy', 'Explained by: Freedom to make life choices',
+                     'Explained by: Generosity', 'Explained by: Perceptions of corruption']
+
+    # Rename to simpler names where present
+    rename_map = {
+        'Country name': 'Country',
+        'Life evaluation (3-year average)': 'Happiness_Score',
+        'Explained by: Log GDP per capita': 'GDP_per_capita_comp',
+        'Explained by: Social support': 'Social_support',
+        'Explained by: Healthy life expectancy': 'Healthy_life_expectancy',
+        'Explained by: Freedom to make life choices': 'Freedom',
+        'Explained by: Generosity': 'Generosity',
+        'Explained by: Perceptions of corruption': 'Perceptions_corruption'
+    }
+    happ_df = happ_df.rename(columns=rename_map)
+
+    st.markdown("""
+    The Happiness Index, often referred to in the context of the World Happiness Report, is a measure of subjective wellbeing that goes beyond traditional health and economic indicators. Unlike purely medical or demographic measures, it captures how individuals perceive the quality of their lives. This index emphasizes that health outcomes are not only about living longer or avoiding disease, but also about living with satisfaction, purpose, and emotional stability.
+
+    **Usefulness:**
+    - Highlights mental health and emotional wellbeing, often overlooked in traditional health metrics.
+    - Provides insights into social cohesion and community support, which are critical determinants of health outcomes.
+    - Can influence policy design, encouraging governments to prioritize happiness and wellbeing in addition to economic growth.
+
+    **Limitations:**
+    - Subjectivity: Responses depend heavily on cultural attitudes, expectations, and personal outlook, which makes cross-country comparisons tricky.
+    - Short-term bias: A person’s current situation may disproportionately influence their reported wellbeing.
+    - Lack of medical precision: Unlike morbidity or life expectancy, it doesn’t directly capture disease burden or healthcare performance.
+
+    **Global Context & Measurement:** The index is based on Gallup World Poll responses (0-10 Cantril ladder) and adjusted for six key explanatory variables: GDP per capita, social support, healthy life expectancy, freedom, generosity and perceptions of corruption.
+    """, unsafe_allow_html=True)
+
+    # Show latest year selector
+    years = sorted(happ_df['Year'].dropna().unique().tolist())
+    if not years:
+        st.error("No year data found in the happiness file.")
+        return
+
+    latest_year = max(years)
+    sel_year = st.selectbox("Select Year", years, index=len(years) - 1)
+
+    year_df = happ_df[happ_df['Year'] == sel_year].copy()
+
+    # Ensure numeric columns
+    for col in ['Happiness_Score', 'GDP_per_capita_comp', 'Social_support', 'Healthy_life_expectancy', 'Freedom', 'Generosity', 'Perceptions_corruption']:
+        if col in year_df.columns:
+            year_df[col] = pd.to_numeric(year_df[col], errors='coerce')
+
+    st.subheader(f"Global Happiness Overview — {sel_year}")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Countries Reported", int(year_df['Country'].nunique()))
+    with col2:
+        if 'Happiness_Score' in year_df.columns:
+            st.metric("Average Happiness Score", f"{year_df['Happiness_Score'].mean():.2f}")
+    with col3:
+        if 'Rank' in year_df.columns:
+            st.metric("Best Rank", int(year_df['Rank'].min()))
+
+    # Top and bottom performers
+    st.subheader("🏆 Top & Bottom Countries")
+    if 'Happiness_Score' in year_df.columns and 'Country' in year_df.columns:
+        top = year_df.nlargest(10, 'Happiness_Score')[['Country', 'Happiness_Score', 'Rank']]
+        bottom = year_df.nsmallest(10, 'Happiness_Score')[['Country', 'Happiness_Score', 'Rank']]
+
+        fig_top = create_top_bottom_comparison(year_df, 'Happiness_Score', n=10)
+        st.plotly_chart(fig_top, use_container_width=True)
+
+    # Components breakdown (stacked / radar)
+    components = [c for c in ['GDP_per_capita_comp', 'Social_support', 'Healthy_life_expectancy', 'Freedom', 'Generosity', 'Perceptions_corruption'] if c in year_df.columns]
+    if components:
+        st.subheader("🧩 Determinants Breakdown — Component Contributions")
+
+        # Show average contributions by component
+        comp_means = year_df[components].mean().sort_values(ascending=False)
+        comp_df = comp_means.reset_index()
+        comp_df.columns = ['Component', 'Average_Contribution']
+        fig_bar = create_bar_chart(comp_df, 'Component', 'Average_Contribution', title='Average Component Contribution to Happiness')
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+        # Allow country comparison of components
+        st.subheader("Compare Countries by Components")
+        countries = sorted(year_df['Country'].dropna().unique().tolist())
+        sel_countries = st.multiselect("Select countries to compare (max 6)", countries, default=countries[:4])
+        if sel_countries:
+            cmp_df = year_df[year_df['Country'].isin(sel_countries)][['Country'] + components].set_index('Country')
+            st.dataframe(cmp_df.round(3))
+            # Create radar using normalized values via create_radar_chart (it expects df and metric names)
+            try:
+                fig_radar = create_radar_chart(year_df, sel_countries, components)
+                st.plotly_chart(fig_radar, use_container_width=True)
+            except Exception:
+                st.info("Radar chart not available for selected countries/components")
+
+    # Time series for a selected country
+    st.subheader("📈 Trends Over Time")
+    country_for_trend = st.selectbox("Select a country for time series", sorted(happ_df['Country'].dropna().unique().tolist()), index=0)
+    country_ts = happ_df[happ_df['Country'] == country_for_trend].sort_values('Year')
+    if not country_ts.empty:
+        # prepare columns
+        if 'Happiness_Score' in country_ts.columns:
+            country_ts['Happiness_Score'] = pd.to_numeric(country_ts['Happiness_Score'], errors='coerce')
+        # line chart
+        ts_cols = ['Happiness_Score'] + [c for c in ['GDP_per_capita_comp','Social_support','Healthy_life_expectancy','Freedom','Generosity','Perceptions_corruption'] if c in country_ts.columns]
+        plot_cols = []
+        for c in ts_cols:
+            if c in country_ts.columns:
+                plot_cols.append(c)
+                country_ts[c] = pd.to_numeric(country_ts[c], errors='coerce')
+
+        if plot_cols:
+            fig_line = create_line_chart(country_ts, 'Year', plot_cols, title=f'Happiness Score & Components — {country_for_trend}')
+            st.plotly_chart(fig_line, use_container_width=True)
+
+    # Regional/Year comparison small multiples
+    st.subheader("🌍 Regional / Year Comparison")
+    year_multi = st.multiselect("Select years to compare (2-6)", years, default=[latest_year])
+    if year_multi and 'Happiness_Score' in happ_df.columns:
+        multi_df = happ_df[happ_df['Year'].isin(year_multi)][['Year','Country','Happiness_Score']]
+        # pivot to have countries as rows and years as columns for top countries
+        top_countries_overall = happ_df[happ_df['Year']==latest_year].nlargest(20,'Happiness_Score')['Country'].tolist()
+        pivot = multi_df[multi_df['Country'].isin(top_countries_overall)].pivot(index='Country', columns='Year', values='Happiness_Score')
+        st.dataframe(pivot.round(3))
+
+    # Key textual highlights (user-provided extended content)
+    st.subheader("Key Highlights & Context")
+    st.markdown("""
+    - Happiest Countries: Finland (8th consecutive year), followed by Denmark, Iceland, and Sweden.
+    - India’s Ranking: 118th (2025), 126th in 2024.
+    - Bottom Countries: Afghanistan (147th), Sierra Leone (146th), Lebanon (145th), Malawi (144th), Zimbabwe (143rd).
+
+    **World Happiness Report methodology:** Rankings use 3-year averages of life evaluations and six explanatory variables (GDP per capita, social support, healthy life expectancy, freedom, generosity, perceptions of corruption).
+    """, unsafe_allow_html=True)
+
+    # Allow download of filtered happiness data
+    st.subheader("Download Happiness Data")
+    st.download_button("📥 Download CSV (selected year)", year_df.to_csv(index=False), file_name=f"happiness_{sel_year}.csv")
+
+
 def main():
     """Main application function"""
     
@@ -1506,7 +1685,8 @@ def main():
         "Go to",
         [
             "🏠 Home",
-            "📊 Global Statistics",
+            "😊 Happiness Index",
+            "� Global Statistics",
             "🔍 Country Comparison",
             "📈 Correlation Analysis",
             "🗺️ Regional Analysis",
@@ -1560,6 +1740,8 @@ def main():
         show_home_page(df)
     elif page == "📊 Global Statistics":
         show_global_statistics(df)
+    elif page == "😊 Happiness Index":
+        show_happiness_page()
     elif page == "🔍 Country Comparison":
         show_country_comparison(df)
     elif page == "📈 Correlation Analysis":
