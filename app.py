@@ -1242,196 +1242,6 @@ def show_conclusions(df):
     
     st.markdown("---")
     
-    # Card 2: Morbidity & Disease Burden Analysis (Full Width)
-    st.markdown("""
-    <div class="conclusion-card" style="border-left-color: #e74c3c;">
-        <div class="conclusion-title">🏥 Morbidity & Disease Burden Analysis</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="info-box">
-    <p><strong>Understanding Disease Burden:</strong> Disability-Adjusted Life Years (DALYs) combine Years of Life Lost (YLL) 
-    and Years Lived with Disability (YLD) to provide a comprehensive measure of overall disease burden.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Create three columns for morbidity visualizations
-    st.markdown("### 📊 Global Morbidity Trends & Comparisons")
-    
-    tab1, tab2, tab3 = st.tabs(["🇮🇳 India Disease Burden", "🌍 Country Comparison", "📈 Temporal Trends"])
-    
-    with tab1:
-        st.markdown("#### Disease Burden (DALYs) in India - 2021")
-        
-        # India-specific disease data
-        india_diseases = {
-            'Disease': ['Ischemic heart disease', 'Stroke', 'Diabetes mellitus'],
-            'DALYs_millions': [35.0, 22.8, 12.9]
-        }
-        india_df = pd.DataFrame(india_diseases)
-        
-        # Create bar chart for India
-        fig_india = go.Figure(data=[
-            go.Bar(
-                x=india_df['Disease'],
-                y=india_df['DALYs_millions'],
-                marker_color='#5dade2',
-                text=india_df['DALYs_millions'],
-                texttemplate='%{text:.1f}M',
-                textposition='outside'
-            )
-        ])
-        fig_india.update_layout(
-            title='Top 3 Disease Burden Contributors in India (2021)',
-            xaxis_title='Disease Category',
-            yaxis_title='DALYs (Disability-Adjusted Life Years) in Millions',
-            height=400,
-            template='plotly_white'
-        )
-        st.plotly_chart(fig_india, use_container_width=True)
-        
-        st.markdown("""
-        <div class="conclusion-highlight">
-        <strong>Key Findings - India (2021):</strong>
-        <ul>
-            <li>🫀 <strong>Ischemic heart disease</strong> leads with approximately <strong>35 million DALYs</strong>, 
-            representing the highest disease burden</li>
-            <li>🧠 <strong>Stroke</strong> is the second major contributor with nearly <strong>22.8 million DALYs</strong></li>
-            <li>💉 <strong>Diabetes mellitus</strong> contributed around <strong>12.9 million DALYs</strong>, 
-            showing its growing health impact</li>
-            <li>📊 These three diseases together form the major <strong>non-communicable disease (NCD) burden</strong> in India</li>
-            <li>⚠️ Results indicate a clear <strong>epidemiological transition</strong> from infectious to lifestyle-related diseases</li>
-        </ul>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with tab2:
-        st.markdown("#### Country-wise Morbidity Comparison (2021)")
-        
-        # Multi-country morbidity data
-        country_morbidity = {
-            'Country': ['Mexico', 'Egypt', 'Indonesia', 'France', 'United Kingdom'],
-            'DALYs': [38000, 56000, 30500, 48500, 54500],
-            'Incidence': [24500, 57000, 16000, 15000, 47500],
-            'Prevalence': [31500, 16500, 49500, 30000, 50500],
-            'YLD': [25500, 11500, 15500, 18500, 40000],
-            'YLL': [11000, 21000, 36500, 11000, 16500]
-        }
-        morbidity_df = pd.DataFrame(country_morbidity)
-        
-        # Melt the dataframe for grouped bar chart
-        morbidity_melted = morbidity_df.melt(
-            id_vars='Country', 
-            value_vars=['DALYs', 'Incidence', 'Prevalence', 'YLD', 'YLL'],
-            var_name='Morbidity Indicator',
-            value_name='Value'
-        )
-        
-        fig_comparison = px.bar(
-            morbidity_melted,
-            x='Country',
-            y='Value',
-            color='Morbidity Indicator',
-            barmode='group',
-            title='Comprehensive Morbidity Indicators Across Countries (2021)',
-            height=450,
-            color_discrete_map={
-                'DALYs': '#e67e22',
-                'Incidence': '#5dade2',
-                'Prevalence': '#16a085',
-                'YLD': '#f4d03f',
-                'YLL': '#2c3e50'
-            }
-        )
-        fig_comparison.update_layout(template='plotly_white')
-        st.plotly_chart(fig_comparison, use_container_width=True)
-        
-        st.markdown("""
-        <div class="conclusion-highlight">
-        <strong>Key Findings - International Comparison:</strong>
-        <ul>
-            <li>🇪🇬 <strong>Egypt and UK</strong> exhibit higher Incidence and DALYs, reflecting a heavier disease burden in 2021</li>
-            <li>🇲🇽 <strong>Mexico</strong> shows high YLD (Years Lived with Disability), suggesting long-term health conditions 
-            significantly impact morbidity</li>
-            <li>🇫🇷 <strong>France</strong> maintains moderate values, indicating effective healthcare response post-pandemic</li>
-            <li>🇮🇩 <strong>Indonesia</strong> has comparatively lower YLL (Years of Life Lost), which may imply better survival 
-            outcomes or younger population health</li>
-            <li>🌍 Overall patterns highlight diverse morbidity profiles driven by healthcare quality, lifestyle factors, 
-            and socio-economic differences across nations</li>
-        </ul>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with tab3:
-        st.markdown("#### DALYs Temporal Trends (2019-2021)")
-        
-        # Temporal trend data
-        years = [2019.0, 2020.0, 2021.0]
-        temporal_data = {
-            'Mexico': [51000, 45000, 38000],
-            'Egypt': [40500, 49800, 55000],
-            'Indonesia': [37500, 30500, 30500],
-            'France': [40500, 14000, 48500],
-            'United Kingdom': [51000, 33500, 55000]
-        }
-        
-        fig_temporal = go.Figure()
-        colors = {'Mexico': '#e67e22', 'Egypt': '#5dade2', 'Indonesia': '#16a085', 
-                  'France': '#f4d03f', 'United Kingdom': '#2c3e50'}
-        
-        for country, values in temporal_data.items():
-            fig_temporal.add_trace(go.Scatter(
-                x=years,
-                y=values,
-                mode='lines+markers',
-                name=country,
-                line=dict(width=3, color=colors[country]),
-                marker=dict(size=10, color=colors[country])
-            ))
-        
-        fig_temporal.update_layout(
-            title='Country-wise DALYs Trend Analysis (2019-2021)',
-            xaxis_title='Year',
-            yaxis_title='DALYs (Disability-Adjusted Life Years)',
-            height=450,
-            template='plotly_white',
-            hovermode='x unified'
-        )
-        st.plotly_chart(fig_temporal, use_container_width=True)
-        
-        st.markdown("""
-        <div class="conclusion-highlight">
-        <strong>Key Findings - Temporal Trends (2019-2021):</strong>
-        <ul>
-            <li>📈 <strong>Mexico and UK</strong> show relatively high DALYs overall, indicating sustained morbidity burden</li>
-            <li>⚠️ <strong>Egypt</strong> shows a sharp increase in DALYs from 2019 to 2021, suggesting worsening health outcomes</li>
-            <li>📊 <strong>France and Indonesia</strong> have moderate DALYs, but France's DALYs increased significantly in 2021, 
-            possibly due to post-pandemic health impacts</li>
-            <li>🌡️ The 2020 dip in France's data likely reflects COVID-19 pandemic disruptions in data collection 
-            or healthcare access</li>
-            <li>🔍 These trends reflect differences in public health systems, disease management strategies, 
-            and socio-economic factors influencing morbidity levels across nations</li>
-        </ul>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Overall Morbidity Conclusion
-    st.markdown("""
-    <div class="key-finding">
-    <strong>📌 Overall Morbidity Conclusion:</strong><br>
-    The analysis reveals a global shift toward non-communicable diseases (NCDs) as primary health challenges. 
-    Cardiovascular diseases and metabolic disorders (diabetes) dominate the disease burden across both developed 
-    and developing nations. This epidemiological transition necessitates:
-    <ul>
-        <li><strong>Enhanced cardiovascular health programs</strong> focusing on prevention and early intervention</li>
-        <li><strong>Comprehensive diabetes management</strong> strategies including lifestyle modification programs</li>
-        <li><strong>Strengthened public health infrastructure</strong> to handle the dual burden of communicable 
-        and non-communicable diseases</li>
-        <li><strong>International collaboration</strong> for sharing best practices in disease management and prevention</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
     
     # Download Section
     st.markdown("---")
@@ -1481,7 +1291,6 @@ def show_conclusions(df):
 def show_happiness_page():
     """Display a dedicated Happiness Index page using the World Happiness CSV"""
     st.title("😊 Happiness Index — World Happiness Report")
-
     # Load happiness data (cached) with encoding fallbacks for Windows/Excel-exported files
     data_path = Path(__file__).parent / 'data' / 'raw' / 'Happiness_data.csv'
     try:
@@ -1649,6 +1458,123 @@ def show_happiness_page():
     st.download_button("📥 Download CSV (selected year)", year_df.to_csv(index=False), file_name=f"happiness_{sel_year}.csv")
 
 
+
+def show_morbidity_page():
+    """Display morbidity data analysis and conclusions from data/raw/morbidity_data.csv"""
+    st.title("🏥 Morbidity — Disease Burden & DALYs")
+
+    # Load morbidity data with encoding fallbacks
+    data_path = Path(__file__).parent / 'data' / 'raw' / 'morbidity_data.csv'
+    try:
+        morb_df = pd.read_csv(data_path)
+    except Exception:
+        morb_df = None
+        for enc in ['utf-8-sig', 'latin-1', 'cp1252']:
+            try:
+                morb_df = pd.read_csv(data_path, encoding=enc)
+                st.warning(f"Loaded morbidity data using fallback encoding: {enc}")
+                break
+            except Exception:
+                morb_df = None
+        if morb_df is None:
+            st.error("Could not load morbidity_data.csv. Please check the file and encoding.")
+            return
+
+    # Provide educational text block (user provided)
+    st.markdown("""
+    ### Morbidity — what it measures
+
+    Morbidity refers to the state of having a disease, illness, or medical condition within a population or an individual. It is commonly used to describe how frequently a disease occurs (disease rate) and can be expressed as either incidence (new cases within a specific time period) or prevalence (total existing cases at a given point in time).
+
+    Morbidity is different from mortality, which refers to death. While mortality measures the frequency of death, morbidity focuses on the burden of illness and its impact on health.
+
+    **Types of Morbidity**
+    1. By Measurement
+    - Incidence morbidity → Number of new cases of a disease in a population during a specific time.
+    - Prevalence morbidity → Total number of people living with a disease (new + existing).
+
+    2. By Duration
+    - Acute morbidity → Short-term illness (e.g., flu)
+    - Chronic morbidity → Long-term illness (e.g., diabetes)
+
+    3. Special Categories
+    - Comorbidity: multiple diseases at once
+    - Disability-related morbidity: measured by DALYs/QALYs
+
+    **DALY vs QALY**
+    - DALY (Disability Adjusted Life Years) = YLL + YLD (years of healthy life lost)
+    - QALY (Quality Adjusted Life Years) = years lived in good health (1 year perfect health = 1 QALY)
+
+    **Key Metrics**
+    - DALYs (per 100,000): combined mortality + morbidity burden
+    - Incidence (per 100,000): new cases in a time period
+    - Prevalence (per 100,000): total existing cases
+    - YLD: years lived with disability
+    - YLL: years of life lost due to premature death
+
+    """, unsafe_allow_html=True)
+
+    # Quick data checks and conversions
+    st.subheader("Data preview & key fields")
+    st.dataframe(morb_df.head(10))
+
+    # Identify numeric columns typically present
+    numeric_cols = [c for c in morb_df.columns if morb_df[c].dtype in [int, float] or 'DALY' in c.upper() or 'YLL' in c.upper() or 'YLD' in c.upper() or 'PREVAL' in c.upper() or 'INCID' in c.upper()]
+
+    # Simple metrics
+    st.subheader("Summary metrics")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Rows", len(morb_df))
+    with col2:
+        st.metric("Numeric fields", len(numeric_cols))
+    with col3:
+        st.metric("Columns", len(morb_df.columns))
+
+    # If region/country and year exist, allow filtering
+    if 'Country' in morb_df.columns and 'Year' in morb_df.columns:
+        st.subheader("Country / Year Filters")
+        years = sorted(morb_df['Year'].dropna().unique().tolist())
+        sel_year = st.selectbox("Year", years, index=len(years)-1)
+        countries = sorted(morb_df['Country'].dropna().unique().tolist())
+        sel_countries = st.multiselect("Countries", countries, default=countries[:6])
+
+        filt = (morb_df['Year'] == sel_year)
+        if sel_countries:
+            filt = filt & (morb_df['Country'].isin(sel_countries))
+
+        view = morb_df[filt]
+        st.dataframe(view.head(50))
+
+        # Plot DALYs / 100k if present
+        possible_daly_cols = [c for c in morb_df.columns if 'DALY' in c.upper() or 'DALYs' in c.upper() or 'DALY_' in c.upper()]
+        if possible_daly_cols:
+            daly_col = possible_daly_cols[0]
+            fig = px.bar(view.sort_values(daly_col, ascending=False), x='Country', y=daly_col, title=f'DALYs by Country — {sel_year}')
+            st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.info("No Country/Year columns detected — showing basic histograms for numeric fields.")
+        if numeric_cols:
+            for c in numeric_cols[:6]:
+                fig = px.histogram(morb_df, x=c, nbins=40, title=f'Distribution: {c}')
+                st.plotly_chart(fig, use_container_width=True)
+
+    # Conclusions and key points (moved from main conclusions)
+    st.subheader("Conclusions — Morbidity Insights")
+    st.markdown("""
+    - The morbidity data helps identify where the largest health burdens lie — whether due to premature death (YLL) or disability (YLD).
+    - DALYs are useful for comparing burdens standardized per 100,000 population across countries and years.
+    - High DALYs driven by YLD indicate chronic disabling conditions that need long-term management (e.g., diabetes, mental health, musculoskeletal disorders).
+    - High DALYs driven by YLL indicate high premature mortality and the need for urgent interventions (e.g., injuries, infectious epidemics).
+    - Limitations: data completeness, underreporting, and differences in case definitions can bias comparisons.
+    """, unsafe_allow_html=True)
+
+    # Download morbidity data option
+    st.subheader("Download")
+    st.download_button("📥 Download morbidity CSV", morb_df.to_csv(index=False), file_name="morbidity_data.csv")
+
+
 def main():
     """Main application function"""
     
@@ -1686,7 +1612,8 @@ def main():
         [
             "🏠 Home",
             "😊 Happiness Index",
-            "� Global Statistics",
+            "📊 Global Statistics",
+            "🏥 Morbidity",
             "🔍 Country Comparison",
             "📈 Correlation Analysis",
             "🗺️ Regional Analysis",
@@ -1748,6 +1675,8 @@ def main():
         show_correlation_analysis(df)
     elif page == "🗺️ Regional Analysis":
         show_regional_analysis(df)
+    elif page == "🏥 Morbidity":
+        show_morbidity_page()
     elif page == "📥 Data Explorer":
         show_data_explorer(df)
     elif page == "📋 Conclusions":
