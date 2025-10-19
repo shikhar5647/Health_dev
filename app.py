@@ -1683,6 +1683,44 @@ def show_life_expectancy_page():
     - Distribution and download
     """)
 
+    # Insert curated explanatory content (definition, types, history, determinants, HALE)
+    st.markdown("""
+    ### About Life Expectancy
+
+    Life expectancy at birth is the statistical estimate of the average remaining years of life for a newborn given current age-specific mortality rates. The longest verified human lifespan is Jeanne Calment (France) who lived to 122 years and 164 days — this is often cited as the observed upper bound of human longevity.
+
+    #### Types of life expectancy
+    - Cohort life expectancy: follows a birth cohort and accounts for future changes in mortality; realistic but retrospective.
+    - Period life expectancy: assumes current age-specific mortality rates apply across a life course; useful for cross-country and year-to-year comparisons.
+    - Healthy Life Expectancy (HALE): estimates years expected to be lived in full health (adjusts for time spent in poor health).
+    - Individual life expectancy: personalized estimate that depends on lifestyle, genetics and environment.
+
+    #### Historical evolution (high level)
+    - 1800: global average ~29 years (high infant mortality, poor sanitation).
+    - 1950: global average ~46 years, thanks to vaccines, antibiotics and sanitation improvements.
+    - 2015: global average ~71 years driven by medical and social progress.
+    - 2025: global average ~73–74 years (regional variation remains large).
+
+    #### Methodology & data considerations
+    - Life tables and age-specific mortality rates are the basis for life expectancy calculations.
+    - Cohort vs period analyses complement one another; period estimates are easier to compute and compare but do not forecast future improvements.
+    - Comparative studies (WHO, UN, OWID) provide context but can differ by methods and data completeness.
+
+    #### Key determinants
+    - Healthcare access and quality (preventive care, vaccinations, treatment).
+    - Nutrition, clean water and sanitation (WASH).
+    - Socioeconomic status (education, income, employment and inequality).
+    - Lifestyle and environment (smoking, diet, physical activity, air pollution).
+    - Government policy and public health programs (tobacco control, environmental regulation, social safety nets).
+
+    #### Healthy Life Expectancy (HALE)
+    HALE shifts attention from lifespan to healthspan — measuring expected years lived in good health. Policy focus increasingly targets both longer and healthier lives.
+
+    #### Implications
+    Life expectancy is a useful health-system indicator and policy tool but has limits: averages can hide inequalities and do not directly measure the burden of disease or quality of life. Combining life expectancy with HALE and morbidity/DALY measures gives a fuller picture.
+
+    """, unsafe_allow_html=True)
+
 
     # Basic cleaning
     if 'Country' not in le_df.columns and any(c.lower() == 'entity' for c in le_df.columns):
